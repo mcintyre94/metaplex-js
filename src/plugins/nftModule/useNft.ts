@@ -16,6 +16,7 @@ export type UseNftOperation = Operation<typeof Key, UseNftInput, UseNftOutput>;
 
 export interface UseNftInput {
   nft: Nft;
+  owner: PublicKey;
 
   // Data.
   numberOfUses?: number;
@@ -38,24 +39,18 @@ export const useNftOperationHandler: OperationHandler<UseNftOperation> = {
   ): Promise<UseNftOutput> => {
     const {
       nft,
+      owner,
       numberOfUses = 1,
       useAuthority = metaplex.identity(),
       confirmOptions,
     } = operation.input;
 
-    // something is wrong here...
-    const owner = nft.metadataAccount.owner;
     const metadata = findMetadataPda(nft.mint);
     const tokenAccount = findAssociatedTokenAccountPda(nft.mint, owner);
 
-    console.log({
-      useAuthority: useAuthority.publicKey.toString(),
-      owner: owner.toString(),
-    });
-
     const accounts: UtilizeInstructionAccounts = {
       mint: nft.mint,
-      useAuthority: owner,
+      useAuthority: useAuthority.publicKey,
       owner,
       tokenAccount,
       metadata,

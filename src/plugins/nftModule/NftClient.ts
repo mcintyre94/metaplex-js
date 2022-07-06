@@ -30,7 +30,7 @@ import {
 import { UseNftInput, useNftOperation, UseNftOutput } from './useNft';
 
 export class NftClient {
-  constructor(protected readonly metaplex: Metaplex) {}
+  constructor(protected readonly metaplex: Metaplex) { }
 
   findByMint(mint: PublicKey): Promise<Nft> {
     return this.metaplex.operations().execute(findNftByMintOperation(mint));
@@ -86,9 +86,10 @@ export class NftClient {
 
   async use(
     nft: Nft,
-    input?: Omit<UseNftInput, 'nft'>
+    owner: PublicKey,
+    input?: Omit<UseNftInput, 'nft' | 'owner'>
   ): Promise<{ nft: Nft } & UseNftOutput> {
-    const operation = useNftOperation({ ...input, nft });
+    const operation = useNftOperation({ ...input, nft, owner });
     const useNftOutput = await this.metaplex.operations().execute(operation);
     const updatedNft = await this.findByMint(nft.mint);
 

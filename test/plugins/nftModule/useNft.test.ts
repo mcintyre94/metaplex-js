@@ -8,6 +8,7 @@ import {
   killStuckProcess,
   spokSameBignum,
 } from '../../helpers';
+import { Keypair } from '@solana/web3.js';
 
 killStuckProcess();
 
@@ -15,7 +16,9 @@ test('it can use an nft', async (t: Test) => {
   // Given we have a Metaplex instance.
   const mx = await metaplex();
 
-  // And an existing SFT.
+  // And an existing SFT owned by owner.
+  const owner = Keypair.generate().publicKey;
+
   const nft = await createNft(
     mx,
     {
@@ -25,6 +28,7 @@ test('it can use an nft', async (t: Test) => {
     },
     {
       name: 'On-chain SFT name',
+      owner,
       isMutable: true,
       uses: {
         useMethod: UseMethod.Multiple,
@@ -35,7 +39,7 @@ test('it can use an nft', async (t: Test) => {
   );
 
   // When we use the NFT once.
-  const { nft: usedNft } = await mx.nfts().use(nft);
+  const { nft: usedNft } = await mx.nfts().use(nft, owner);
 
   // Then the returned SFT should have one less use.
   spok(t, usedNft, {
@@ -59,54 +63,58 @@ test('it can use an nft', async (t: Test) => {
   } as unknown as Specifications<Nft>);
 });
 
-// test('it can use an nft multiple times', async (t: Test) => {
-//   const totalUses = 10;
-//   const timesToUse = 3;
-//   // Given we have a Metaplex instance.
-//   const mx = await metaplex();
+test('it can use an nft multiple times', async (t: Test) => {
+  const totalUses = 10;
+  const timesToUse = 3;
 
-//   // And an existing SFT.
-//   const nft = await createNft(
-//     mx,
-//     {
-//       name: 'JSON SFT name',
-//       description: 'JSON SFT description',
-//       image: useMetaplexFile('some image', 'some-image.jpg'),
-//     },
-//     {
-//       name: 'On-chain SFT name',
-//       isMutable: true,
-//       uses: {
-//         useMethod: 1,
-//         remaining: totalUses,
-//         total: totalUses,
-//       },
-//     }
-//   );
+  // Given we have a Metaplex instance.
+  const mx = await metaplex();
 
-//   // When we use the NFT "n" times.
-//   const { nft: usedNft } = await mx
-//     .nfts()
-//     .use(nft, { numberOfUses: timesToUse });
+  // And an existing SFT owner by owner.
+  const owner = Keypair.generate().publicKey;
 
-//   // Then the returned NFT should have "n" less uses.
-//   spok(t, usedNft, {
-//     $topic: 'use-nft',
-//     uses: {
-//       useMethod: UseMethod.Multiple,
-//       remaining: spokSameBignum(totalUses - timesToUse),
-//       total: spokSameBignum(totalUses),
-//     },
-//   } as unknown as Specifications<Nft>);
+  const nft = await createNft(
+    mx,
+    {
+      name: 'JSON SFT name',
+      description: 'JSON SFT description',
+      image: useMetaplexFile('some image', 'some-image.jpg'),
+    },
+    {
+      name: 'On-chain SFT name',
+      owner: owner,
+      isMutable: true,
+      uses: {
+        useMethod: 1,
+        remaining: totalUses,
+        total: totalUses,
+      },
+    }
+  );
 
-//   // And the same goes if we try to fetch the NFT again.
-//   const foundUsedNft = await mx.nfts().findByMint(nft.mint);
-//   spok(t, foundUsedNft, {
-//     $topic: 'check-downloaded-nft',
-//     uses: {
-//       useMethod: UseMethod.Multiple,
-//       remaining: spokSameBignum(totalUses - timesToUse),
-//       total: spokSameBignum(totalUses),
-//     },
-//   } as unknown as Specifications<Nft>);
-// });
+  // When we use the NFT "n" times.
+  const { nft: usedNft } = await mx
+    .nfts()
+    .use(nft, owner, { numberOfUses: timesToUse });
+
+  // Then the returned NFT should have "n" less uses.
+  spok(t, usedNft, {
+    $topic: 'use-nft',
+    uses: {
+      useMethod: UseMethod.Multiple,
+      remaining: spokSameBignum(totalUses - timesToUse),
+      total: spokSameBignum(totalUses),
+    },
+  } as unknown as Specifications<Nft>);
+
+  // And the same goes if we try to fetch the NFT again.
+  const foundUsedNft = await mx.nfts().findByMint(nft.mint);
+  spok(t, foundUsedNft, {
+    $topic: 'check-downloaded-nft',
+    uses: {
+      useMethod: UseMethod.Multiple,
+      remaining: spokSameBignum(totalUses - timesToUse),
+      total: spokSameBignum(totalUses),
+    },
+  } as unknown as Specifications<Nft>);
+});
